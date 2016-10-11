@@ -25,7 +25,7 @@ func (bot *Bot) ListenRegexp(re *regexp.Regexp, handler BotAction) {
 		logger.Info("NO MATCH. Not invoking handler.")
 		return nil, Continue
 	}
-	bot.OnEvent("message", closure)
+	bot.onEvent("message", closure)
 }
 
 // Listen registers the given handler to fire on "message" events with no

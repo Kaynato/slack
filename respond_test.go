@@ -42,7 +42,7 @@ func TestRespondGeneratedClosure(t *testing.T) {
 			compareMessages(test.expectedMessage, actualMessage.toMap(), t)
 		}
 		if test.expectedStatus != actualStatus {
-			t.Errorf("Error. Expected %i. Got %i", test.expectedStatus, actualStatus)
+			t.Errorf("Error. Expected %d. Got %d", test.expectedStatus, actualStatus)
 		}
 	}
 }
@@ -66,7 +66,7 @@ func TestRespond(t *testing.T) {
 		bot := NewBot("token")
 		bot.Name = "testbot"
 		bot.Respond(test.pattern, shutdownHandler)
-		handler := bot.Handlers["message"][0]
+		handler := bot.activeBot.Handlers["message"][0]
 		event := map[string]interface{}{"text": test.eventText}
 		actualMessage, actualStatus := handler(bot, event)
 		if test.expectedMessage == nil {
@@ -79,7 +79,7 @@ func TestRespond(t *testing.T) {
 			compareMessages(test.expectedMessage.toMap(), actualMessage.toMap(), t)
 		}
 		if test.expectedStatus != actualStatus {
-			t.Errorf("Error. Expected %i. Got %i", test.expectedStatus, actualStatus)
+			t.Errorf("Error. Expected %d. Got %d", test.expectedStatus, actualStatus)
 		}
 	}
 }
@@ -90,14 +90,14 @@ func TestRespondNoEventText(t *testing.T) {
 	bot := NewBot("token")
 	bot.Name = "testbot"
 	bot.Respond("hi", shutdownHandler)
-	handler := bot.Handlers["message"][0]
+	handler := bot.activeBot.Handlers["message"][0]
 	event := map[string]interface{}{}
 	actualMessage, actualStatus := handler(bot, event)
 	if actualMessage != nil {
 		t.Errorf("Error. Expected nil. Got %v.", actualMessage)
 	}
 	if Continue != actualStatus {
-		t.Errorf("Error. Expected %i. Got %i", Continue, actualStatus)
+		t.Errorf("Error. Expected %d. Got %d", Continue, actualStatus)
 	}
 }
 
@@ -121,7 +121,7 @@ func TestRespondRegexp(t *testing.T) {
 		bot := NewBot("token")
 		bot.Name = "testbot"
 		bot.RespondRegexp(re, shutdownHandler)
-		handler := bot.Handlers["message"][0]
+		handler := bot.activeBot.Handlers["message"][0]
 		event := map[string]interface{}{"text": test.eventText}
 		actualMessage, actualStatus := handler(bot, event)
 		if test.expectedMessage == nil {
@@ -134,7 +134,7 @@ func TestRespondRegexp(t *testing.T) {
 			compareMessages(test.expectedMessage.toMap(), actualMessage.toMap(), t)
 		}
 		if test.expectedStatus != actualStatus {
-			t.Errorf("Error. Expected %i. Got %i", test.expectedStatus, actualStatus)
+			t.Errorf("Error. Expected %d. Got %d", test.expectedStatus, actualStatus)
 		}
 	}
 }

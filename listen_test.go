@@ -31,7 +31,7 @@ func TestListen(t *testing.T) {
 	for _, test := range tests {
 		bot := NewBot("token")
 		bot.Listen(test.pattern, shutdownHandler)
-		handler := bot.Handlers["message"][0]
+		handler := bot.activeBot.Handlers["message"][0]
 		event := map[string]interface{}{"text": test.eventText}
 		actualMessage, actualStatus := handler(nil, event)
 		if test.expectedMessage == nil {
@@ -44,7 +44,7 @@ func TestListen(t *testing.T) {
 			compareMessages(test.expectedMessage.toMap(), actualMessage.toMap(), t)
 		}
 		if test.expectedStatus != actualStatus {
-			t.Errorf("Error. Expected %i. Got %i", test.expectedStatus, actualStatus)
+			t.Errorf("Error. Expected %d. Got %d", test.expectedStatus, actualStatus)
 		}
 	}
 }
@@ -54,14 +54,14 @@ func TestListenNoEventText(t *testing.T) {
 
 	bot := NewBot("token")
 	bot.Listen("hi", shutdownHandler)
-	handler := bot.Handlers["message"][0]
+	handler := bot.activeBot.Handlers["message"][0]
 	event := map[string]interface{}{}
 	actualMessage, actualStatus := handler(nil, event)
 	if actualMessage != nil {
 		t.Errorf("Error. Expected nil. Got %v.", actualMessage)
 	}
 	if Continue != actualStatus {
-		t.Errorf("Error. Expected %i. Got %i", Continue, actualStatus)
+		t.Errorf("Error. Expected %d. Got %d", Continue, actualStatus)
 	}
 }
 
@@ -82,7 +82,7 @@ func TestListenRegexp(t *testing.T) {
 	for _, test := range tests {
 		bot := NewBot("token")
 		bot.ListenRegexp(re, shutdownHandler)
-		handler := bot.Handlers["message"][0]
+		handler := bot.activeBot.Handlers["message"][0]
 		event := map[string]interface{}{"text": test.eventText}
 		actualMessage, actualStatus := handler(nil, event)
 		if test.expectedMessage == nil {
@@ -95,7 +95,7 @@ func TestListenRegexp(t *testing.T) {
 			compareMessages(test.expectedMessage.toMap(), actualMessage.toMap(), t)
 		}
 		if test.expectedStatus != actualStatus {
-			t.Errorf("Error. Expected %i. Got %i", test.expectedStatus, actualStatus)
+			t.Errorf("Error. Expected %d. Got %d", test.expectedStatus, actualStatus)
 		}
 	}
 }

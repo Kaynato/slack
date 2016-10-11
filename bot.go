@@ -16,27 +16,38 @@ const (
 // Bot encapsulates all the data needed to interact with Slack.
 type Bot struct {
 	Token        string
-	Name         string
-	ID           string
-	Handlers     map[string]([]BotAction)
-	Subhandlers  map[string](map[string]([]BotAction))
-	Users        map[string]*User
-	Channels     map[string]string
-	reconnectURL string
+	Name         string             // Name of manager (will show up on slack)
+	ID           string             // Slack-related ID
+	Users        map[string]*User   // Store and access User info
+	Channels     map[string]string  // Store and access Channel info
+	reconnectURL string             // URL to reconnect to if lost
+	SubBots      map[string]*SubBot // Map of SubBot IDs to SubBot structs
+	SubBotArr    map[int]*SubBot    // SubBots by index
+	SubBotName   map[string]*SubBot // SubBots by name - TODO: overhead probably can be reduced
+	SubBotNum    int                // SubBots count
+	activeBot    *SubBot            // Active bot
 }
 
 // NewBot constructs a new bot with the passed-in Slack API token.
+// There must also at least one subBot which is the activebot.
 func NewBot(token string) *Bot {
-	return &Bot{
+	bot := &Bot{
 		Token:        token,
 		Name:         "",
 		ID:           "",
-		Handlers:     make(map[string]([]BotAction)),
-		Subhandlers:  make(map[string](map[string]([]BotAction))),
 		Users:        make(map[string]*User),
 		Channels:     make(map[string]string),
 		reconnectURL: "",
+		SubBots:      make(map[string]*SubBot),
+		SubBotArr:    make(map[int]*SubBot),
+		SubBotName:   make(map[string]*SubBot),
+		SubBotNum:    0,
+		activeBot:    nil,
 	}
+
+	bot.AddSubBot("default")
+
+	return bot
 }
 
 // StoreReconnectURL takes a "url" from an event and stores it. This is done so
@@ -80,7 +91,7 @@ func (bot *Bot) Start() error {
 		"id":   bot.ID,
 		"name": bot.Name,
 	}).Info("bot authenticated")
-	bot.OnEvent("reconnect_url", StoreReconnectURL)
+	bot.onEvent("reconnect_url", StoreReconnectURL)
 	for {
 		reconnect, err := bot.connect(websocketURL)
 		if reconnect && bot.reconnectURL != "" {
@@ -101,6 +112,7 @@ func (bot *Bot) connect(websocketURL string) (bool, error) {
 	return bot.loop(conn), nil
 }
 
+// Contains the running listen loop and terminates on migration or close connection
 func (bot *Bot) loop(conn *websocket.Conn) bool {
 	defer conn.Close()
 	for {
@@ -127,6 +139,7 @@ func (bot *Bot) loop(conn *websocket.Conn) bool {
 		if ok && eventType.(string) == "team_migration_started" {
 			return true
 		}
+		// TODO: Multibot web-facing API handle should be here
 		wrappers := bot.handle(event)
 		closeConnection := sendResponses(wrappers, conn)
 		if closeConnection {

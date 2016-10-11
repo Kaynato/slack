@@ -5,57 +5,32 @@ type messageWrapper struct {
 	status  Status
 }
 
-// OnEvent registers handler to fire on the given type of event.
-func (bot *Bot) OnEvent(event string, handler BotAction) {
-	handlers, ok := bot.Handlers[event]
-	if !ok {
-		handlers = make([]BotAction, 0)
-	}
-	handlers = append(handlers, handler)
-	bot.Handlers[event] = handlers
+/*
+	Compatibility with direct bot access (bot event reception)
+	Actual event reception should be moved to subBots - the main "bot" should only handle delegation
+	and subbot management.
+
+	Easily addressed by passing through into the active bot.
+	These are a sort of "default" scenario.
+*/
+
+// Internal direct handler reference.
+func (bot *Bot) onEvent(event string, handler BotAction) {
+	bot.activeBot.OnEvent(event, handler)
 }
 
-// OnEventWithSubtype registers handler to fire on the given type and subtype
-// of event.
+// OnEventWithSubtype registers handler to fire on the given type and subtype of event.
 func (bot *Bot) OnEventWithSubtype(event, subtype string, handler BotAction) {
-	subtypeMap, ok := bot.Subhandlers[event]
-	if !ok {
-		subtypeMap = make(map[string]([]BotAction))
-		bot.Subhandlers[event] = subtypeMap
-	}
-	handlers, ok := bot.Subhandlers[event][subtype]
-	if !ok {
-		handlers = make([]BotAction, 0)
-	}
-	handlers = append(handlers, handler)
-	bot.Subhandlers[event][subtype] = handlers
+	bot.activeBot.OnEventWithSubtype(event, subtype, handler)
 }
 
+// Delegate to correct subBot
 func (bot *Bot) handle(event map[string]interface{}) (wrappers []messageWrapper) {
-	eventType, hasType := event["type"].(string)
-	eventSubtype, hasSubtype := event["subtype"].(string)
-
-	if hasSubtype {
-		subhandlerMap, ok := bot.Subhandlers[eventType]
-		if ok {
-			subhandlers, ok := subhandlerMap[eventSubtype]
-			if ok {
-				for _, subhandler := range subhandlers {
-					message, status := subhandler(bot, event)
-					wrappers = append(wrappers,
-						messageWrapper{message, status})
-				}
-			}
-		}
+	eventTarget, hasTarget := event["target"].(string)
+	target := bot.activeBot // Obtain targeted bot
+	if hasTarget {
+		target = bot.GetTarget(eventTarget)
 	}
-	if hasType {
-		handlers, ok := bot.Handlers[eventType]
-		if ok {
-			for _, handler := range handlers {
-				message, status := handler(bot, event)
-				wrappers = append(wrappers, messageWrapper{message, status})
-			}
-		}
-	}
+	wrappers = target.handle(event)
 	return
 }
